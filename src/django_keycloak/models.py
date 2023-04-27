@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class Server(models.Model):
-
     url = models.CharField(max_length=255)
 
     internal_url = models.CharField(
@@ -29,7 +28,6 @@ class Server(models.Model):
 
 
 class Realm(models.Model):
-
     server = models.ForeignKey(Server, related_name='realms',
                                on_delete=models.CASCADE)
 
@@ -66,7 +64,7 @@ class Realm(models.Model):
         """
         if self._keycloak_realm is None:
             import django_keycloak.services.realm
-            self._keycloak_realm = django_keycloak.services.realm.\
+            self._keycloak_realm = django_keycloak.services.realm. \
                 get_realm_api_client(realm=self)
         return self._keycloak_realm
 
@@ -75,7 +73,6 @@ class Realm(models.Model):
 
 
 class Client(models.Model):
-
     realm = models.OneToOneField(Realm, related_name='client',
                                  on_delete=models.CASCADE)
 
@@ -126,7 +123,6 @@ class Client(models.Model):
 
 
 class Role(models.Model):
-
     client = models.ForeignKey('django_keycloak.Client',
                                related_name='roles',
                                on_delete=models.CASCADE)
@@ -141,7 +137,6 @@ class Role(models.Model):
 
 
 class TokenModelAbstract(models.Model):
-
     access_token = models.TextField(null=True)
     expires_before = models.DateTimeField(null=True)
 
@@ -160,7 +155,6 @@ class TokenModelAbstract(models.Model):
 
 
 class OpenIdConnectProfileAbstract(TokenModelAbstract):
-
     sub = models.CharField(max_length=255, unique=True)
 
     realm = models.ForeignKey('django_keycloak.Realm',
@@ -187,7 +181,6 @@ class OpenIdConnectProfileAbstract(TokenModelAbstract):
 
 
 class RemoteUserOpenIdConnectProfile(OpenIdConnectProfileAbstract):
-
     is_remote = True
     _user = None
 
@@ -199,13 +192,13 @@ class RemoteUserOpenIdConnectProfile(OpenIdConnectProfileAbstract):
             import django_keycloak.services.oidc_profile
             self._user = django_keycloak.services.oidc_profile. \
                 get_remote_user_from_profile(
-                    oidc_profile=self
-                )
+                oidc_profile=self
+            )
         return self._user
 
     def set_user(self, user):
         import django_keycloak.services.oidc_profile
-        RemoteUserModel = django_keycloak.services.oidc_profile\
+        RemoteUserModel = django_keycloak.services.oidc_profile \
             .get_remote_user_model()
         if not isinstance(user, RemoteUserModel):
             raise RuntimeError('Can\'t set a non-remote user to the {}'.format(
@@ -217,26 +210,23 @@ class RemoteUserOpenIdConnectProfile(OpenIdConnectProfileAbstract):
 
 
 class OpenIdConnectProfile(OpenIdConnectProfileAbstract):
-
     is_remote = False
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
-                                related_name='oidc_profile',
-                                on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             related_name='oidc_profiles_user',
+                             on_delete=models.CASCADE)
 
     class Meta(RemoteUserOpenIdConnectProfile.Meta):
         swappable = 'KEYCLOAK_OIDC_PROFILE_MODEL'
 
 
 class Nonce(models.Model):
-
     state = models.UUIDField(default=uuid.uuid4, unique=True)
-    redirect_uri = models.CharField(max_length=255)
-    next_path = models.CharField(max_length=255, null=True)
+    redirect_uri = models.CharField(max_length=500)
+    next_path = models.CharField(max_length=500, null=True)
 
 
 class ExchangedToken(TokenModelAbstract):
-
     oidc_profile = models.ForeignKey(
         settings.KEYCLOAK_OIDC_PROFILE_MODEL,
         on_delete=models.CASCADE
@@ -252,7 +242,6 @@ class ExchangedToken(TokenModelAbstract):
 
 
 class RemoteClient(models.Model):
-
     name = models.CharField(max_length=255)
     realm = models.ForeignKey('django_keycloak.Realm',
                               related_name='remote_clients',
