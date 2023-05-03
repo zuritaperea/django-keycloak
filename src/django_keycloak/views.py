@@ -84,6 +84,11 @@ class LoginComplete(RedirectView):
                             code=request.GET['code'],
                             redirect_uri=nonce.redirect_uri)
 
+        if 'realm_name' in request.session:
+            realm_name=request.session.get('realm_name')
+            user.realm_name = realm_name
+            user.save(update_fields=['realm_name'])
+
         RemoteUserModel = get_remote_user_model()
         if isinstance(user, RemoteUserModel):
             remote_user_login(request, user)
@@ -99,7 +104,7 @@ class Logout(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         if hasattr(self.request.user, 'oidc_profile'):
-            self.request.realm.client.openid_api_client.logout(
+            self.request.user.oidc_profile.realm.client.openid_api_client.logout(
                 self.request.user.oidc_profile.refresh_token
             )
             self.request.user.oidc_profile.access_token = None
