@@ -25,9 +25,8 @@ from django.views.generic.base import (
     TemplateView
 )
 
-from django_keycloak.models import Nonce
+from django_keycloak.models import Nonce, OpenIdConnectProfile
 from django_keycloak.auth import remote_user_login
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ logger = logging.getLogger(__name__)
 class Login(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
-
         nonce = Nonce.objects.create(
             redirect_uri=self.request.build_absolute_uri(
                 location=reverse('keycloak_login_complete')),
@@ -43,12 +41,12 @@ class Login(RedirectView):
 
         self.request.session['oidc_state'] = str(nonce.state)
 
-        authorization_url = self.request.realm.client.openid_api_client\
+        authorization_url = self.request.realm.client.openid_api_client \
             .authorization_url(
-                redirect_uri=nonce.redirect_uri,
-                scope='openid given_name family_name email',
-                state=str(nonce.state)
-            )
+            redirect_uri=nonce.redirect_uri,
+            scope='openid given_name family_name email',
+            state=str(nonce.state)
+        )
 
         if self.request.realm.server.internal_url:
             authorization_url = authorization_url.replace(
@@ -85,7 +83,7 @@ class LoginComplete(RedirectView):
                             redirect_uri=nonce.redirect_uri)
 
         if 'realm_name' in request.session:
-            realm_name=request.session.get('realm_name')
+            realm_name = request.session.get('realm_name')
             user.realm_name = realm_name
             user.save(update_fields=['realm_name'])
 
@@ -107,16 +105,15 @@ class Logout(RedirectView):
             self.request.user.oidc_profile.realm.client.openid_api_client.logout(
                 self.request.user.oidc_profile.refresh_token
             )
-            self.request.user.oidc_profile.access_token = None
-            self.request.user.oidc_profile.expires_before = None
-            self.request.user.oidc_profile.refresh_token = None
-            self.request.user.oidc_profile.refresh_expires_before = None
-            self.request.user.oidc_profile.save(update_fields=[
-                'access_token',
-                'expires_before',
-                'refresh_token',
-                'refresh_expires_before'
-            ])
+            OpenIdConnectProfile.objects.filter(user=self.request.user).update(
+                access_token=None,
+                expires_before=None,
+                refresh_token=None,
+                refresh_expires_before=None,
+            )
+        # Elimino oidc_state si existe
+        if 'oidc_state' in self.request.session:
+            del self.request.session['oidc_state']
 
         logout(self.request)
 
