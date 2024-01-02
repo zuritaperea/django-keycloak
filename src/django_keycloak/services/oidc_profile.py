@@ -14,7 +14,6 @@ from keycloak.exceptions import KeycloakClientError
 from django_keycloak.services.exceptions import TokensExpired
 from django_keycloak.remote_user import KeycloakRemoteUser
 
-
 import django_keycloak.services.realm
 from django_keycloak.signals import keycloak_populate_user
 
@@ -118,13 +117,13 @@ def update_or_create_user_and_oidc_profile(client, id_token_object, force_popula
     OpenIdConnectProfileModel = get_openid_connect_profile_model()
 
     if OpenIdConnectProfileModel.is_remote:
-        oidc_profile, _ = OpenIdConnectProfileModel.objects.\
+        oidc_profile, _ = OpenIdConnectProfileModel.objects. \
             update_or_create(
-                sub=id_token_object['sub'],
-                defaults={
-                    'realm': client.realm
-                }
-            )
+            sub=id_token_object['sub'],
+            defaults={
+                'realm': client.realm
+            }
+        )
 
         UserModel = get_remote_user_model()
         oidc_profile.user = UserModel(id_token_object)
@@ -144,7 +143,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object, force_popula
 
             # Give the client a chance to finish populating the user just before saving.
             keycloak_populate_user.send(
-                type('KeycloakSignal', (object, ), {}),
+                type('KeycloakSignal', (object,), {}),
                 user=user
             )
 
@@ -313,7 +312,7 @@ def get_active_access_token(oidc_profile):
 
     if initiate_time > oidc_profile.expires_before:
         # Refresh token
-        token_response = oidc_profile.realm.client.openid_api_client\
+        token_response = oidc_profile.realm.client.openid_api_client \
             .refresh_token(refresh_token=oidc_profile.refresh_token)
 
         oidc_profile = update_tokens(token_model=oidc_profile,
