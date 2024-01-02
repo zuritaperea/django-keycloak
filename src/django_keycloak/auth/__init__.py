@@ -25,6 +25,7 @@ def get_remote_user(request):
     sub = request.session.get(REMOTE_SESSION_KEY)
 
     user = None
+
     OpenIdConnectProfile = django_keycloak.services.oidc_profile\
         .get_openid_connect_profile_model()
 

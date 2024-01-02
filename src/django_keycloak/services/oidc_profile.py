@@ -14,8 +14,8 @@ from keycloak.exceptions import KeycloakClientError
 from django_keycloak.services.exceptions import TokensExpired
 from django_keycloak.remote_user import KeycloakRemoteUser
 
+
 import django_keycloak.services.realm
-from django_keycloak.signals import keycloak_populate_user
 
 logger = logging.getLogger(__name__)
 
@@ -75,40 +75,9 @@ def get_or_create_from_id_token(client, id_token):
         client=client, id_token_object=id_token_object)
 
 
-def get_or_build_user(id_token_object):
-    UserModel = get_user_model()
-
-    built = False
-    lookup = {UserModel.USERNAME_FIELD: id_token_object[settings.KEYCLOAK_USERNAME_ATTR]}
-
-    try:
-        user = UserModel.objects.get(**lookup)
-    except UserModel.DoesNotExist:
-        user = UserModel(**lookup)
-        built = True
-
-    return user, built
-
-
-def _populate_user_from_attributes(user, id_token_object):
-    email_field_name = get_user_model().get_email_field_name()
-
-    if email_field_name not in settings.KEYCLOAK_USER_ATTR_MAP:
-        settings.KEYCLOAK_USER_ATTR_MAP.update(**{email_field_name: 'email'})
-
-    for field, attr in settings.KEYCLOAK_USER_ATTR_MAP.items():
-        try:
-            value = id_token_object[attr]
-        except (TypeError, LookupError):
-            logger.warning('Does not exists value for attribute {}'.format(attr))
-        else:
-            setattr(user, field, value)
-
-
-def update_or_create_user_and_oidc_profile(client, id_token_object, force_populate=False):
+def update_or_create_user_and_oidc_profile(client, id_token_object):
     """
 
-    :param force_populate: boolean
     :param client:
     :param id_token_object:
     :return:
@@ -117,13 +86,13 @@ def update_or_create_user_and_oidc_profile(client, id_token_object, force_popula
     OpenIdConnectProfileModel = get_openid_connect_profile_model()
 
     if OpenIdConnectProfileModel.is_remote:
-        oidc_profile, _ = OpenIdConnectProfileModel.objects. \
+        oidc_profile, _ = OpenIdConnectProfileModel.objects.\
             update_or_create(
-            sub=id_token_object['sub'],
-            defaults={
-                'realm': client.realm
-            }
-        )
+                sub=id_token_object['sub'],
+                defaults={
+                    'realm': client.realm
+                }
+            )
 
         UserModel = get_remote_user_model()
         oidc_profile.user = UserModel(id_token_object)
@@ -131,24 +100,16 @@ def update_or_create_user_and_oidc_profile(client, id_token_object, force_popula
         return oidc_profile
 
     with transaction.atomic():
-        save_user = False
-        user, built = get_or_build_user(id_token_object)
-
-        should_populate = force_populate or settings.KEYCLOAK_ALWAYS_UPDATE_USER or built
-
-        if should_populate:
-            logger.info('Populating Django user {}'.format(user))
-            _populate_user_from_attributes(user, id_token_object)
-            save_user = True
-
-            # Give the client a chance to finish populating the user just before saving.
-            keycloak_populate_user.send(
-                type('KeycloakSignal', (object,), {}),
-                user=user
-            )
-
-        if save_user or built:
-            user.save()
+        UserModel = get_user_model()
+        email_field_name = UserModel.get_email_field_name()
+        user, _ = UserModel.objects.update_or_create(
+            username=id_token_object['preferred_username'], # modified to map with the username
+            defaults={
+                email_field_name: id_token_object.get('email', ''),
+                'first_name': id_token_object.get('given_name', ''),
+                'last_name': id_token_object.get('family_name', '')
+            }
+        )
 
         oidc_profile, _ = OpenIdConnectProfileModel.objects.update_or_create(
             sub=id_token_object['sub'],
@@ -205,7 +166,7 @@ def update_or_create_from_code(code, client, redirect_uri):
         code=code, redirect_uri=redirect_uri)
 
     return _update_or_create(client=client, token_response=token_response,
-                             initiate_time=initiate_time)
+                              initiate_time=initiate_time)
 
 
 def update_or_create_from_password_credentials(username, password, client):
@@ -258,7 +219,8 @@ def _update_or_create(client, token_response, initiate_time):
         key=client.realm.certs,
         algorithms=client.openid_api_client.well_known[
             'id_token_signing_alg_values_supported'],
-        issuer=issuer
+        issuer=issuer,
+        access_token=token_response["access_token"], # modified to fix the issue https://github.com/Peter-Slump/django-keycloak/issues/57
     )
 
     oidc_profile = update_or_create_user_and_oidc_profile(
@@ -286,7 +248,10 @@ def update_tokens(token_model, token_response, initiate_time):
 
     token_model.access_token = token_response['access_token']
     token_model.expires_before = expires_before
-    token_model.refresh_token = token_response['refresh_token']
+    try:
+        token_model.refresh_token = token_response['refresh_token']
+    except:
+        token_model.refresh_token = None
     token_model.refresh_expires_before = refresh_expires_before
 
     token_model.save(update_fields=['access_token',
@@ -312,7 +277,7 @@ def get_active_access_token(oidc_profile):
 
     if initiate_time > oidc_profile.expires_before:
         # Refresh token
-        token_response = oidc_profile.realm.client.openid_api_client \
+        token_response = oidc_profile.realm.client.openid_api_client\
             .refresh_token(refresh_token=oidc_profile.refresh_token)
 
         oidc_profile = update_tokens(token_model=oidc_profile,

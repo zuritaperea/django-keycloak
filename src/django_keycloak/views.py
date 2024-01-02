@@ -25,8 +25,10 @@ from django.views.generic.base import (
     TemplateView
 )
 
-from django_keycloak.models import Nonce, OpenIdConnectProfile
+from django_keycloak.models import Nonce, Server, Client, Realm
 from django_keycloak.auth import remote_user_login
+from urllib.parse import urlencode
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,7 @@ logger = logging.getLogger(__name__)
 class Login(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
+
         nonce = Nonce.objects.create(
             redirect_uri=self.request.build_absolute_uri(
                 location=reverse('keycloak_login_complete')),
@@ -41,12 +44,12 @@ class Login(RedirectView):
 
         self.request.session['oidc_state'] = str(nonce.state)
 
-        authorization_url = self.request.realm.client.openid_api_client \
+        authorization_url = self.request.realm.client.openid_api_client\
             .authorization_url(
-            redirect_uri=nonce.redirect_uri,
-            scope='openid given_name family_name email',
-            state=str(nonce.state)
-        )
+                redirect_uri=nonce.redirect_uri,
+                scope='openid profile email', # modified from 'openid given_name family_name email' to fix invaild scopes issue https://github.com/oauth2-proxy/oauth2-proxy/issues/1448
+                state=str(nonce.state)
+            )
 
         if self.request.realm.server.internal_url:
             authorization_url = authorization_url.replace(
@@ -95,6 +98,9 @@ class LoginComplete(RedirectView):
 
         nonce.delete()
 
+        if settings.LOGIN_REDIRECT_URL:
+            return HttpResponseRedirect(resolve_url(settings.LOGIN_REDIRECT_URL))
+
         return HttpResponseRedirect(nonce.next_path or '/')
 
 
@@ -102,16 +108,19 @@ class Logout(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         if hasattr(self.request.user, 'oidc_profile'):
-            self.request.user.oidc_profile.realm.client.openid_api_client.logout(
+            self.request.realm.client.openid_api_client.logout(
                 self.request.user.oidc_profile.refresh_token
             )
-            OpenIdConnectProfile.objects.filter(user=self.request.user).update(
-                access_token=None,
-                expires_before=None,
-                refresh_token=None,
-                refresh_expires_before=None,
-            )
-        # Elimino oidc_state si existe
+            self.request.user.oidc_profile.access_token = None
+            self.request.user.oidc_profile.expires_before = None
+            self.request.user.oidc_profile.refresh_token = None
+            self.request.user.oidc_profile.refresh_expires_before = None
+            self.request.user.oidc_profile.save(update_fields=[
+                'access_token',
+                'expires_before',
+                'refresh_token',
+                'refresh_expires_before'
+            ])
         if 'oidc_state' in self.request.session:
             del self.request.session['oidc_state']
 
@@ -153,3 +162,31 @@ class SessionIframe(TemplateView):
             cookie_name=getattr(settings, 'KEYCLOAK_SESSION_STATE_COOKIE_NAME',
                                 'session_state')
         )
+
+
+class Register(RedirectView):
+    """Generate link for user registration with Keycloak."""
+
+    def get_redirect_url(self, *args, **kwargs):
+        server = Server.objects.last()
+        realm = Realm.objects.last()
+        client = Client.objects.last()
+        lang = self.request.GET.get('lang')
+
+        keycloack_register_url = f"{server.url.rstrip('/')}/realms/{realm.name}/protocol/openid-connect/registrations"
+
+        registration_url = (
+            keycloack_register_url
+            + "?"
+            + urlencode(
+                {
+                    "client_id": client.client_id,
+                    "response_type": "code",
+                    "scope": "openid email",
+                    "redirect_uri": self.request.build_absolute_uri(location=reverse('keycloak_login')),
+                    "kc_locale": lang if lang else 'ar',
+                }
+            )
+        )
+
+        return registration_url

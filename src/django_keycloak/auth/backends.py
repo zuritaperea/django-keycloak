@@ -23,16 +23,15 @@ class KeycloakAuthorizationBase(object):
         UserModel = get_user_model()
 
         try:
-            user = UserModel.objects.get(
+            user = UserModel.objects.select_related('oidc_profile__realm').get(
                 pk=user_id)
         except UserModel.DoesNotExist:
             return None
 
-        oidc_profile = user.oidc_profile
-        if not oidc_profile:
+        if not user.oidc_profile or not user.oidc_profile.refresh_expires_before:
             return None
 
-        if oidc_profile.refresh_expires_before is not None and oidc_profile.refresh_expires_before > timezone.now():
+        if user.oidc_profile.refresh_expires_before > timezone.now():
             return user
 
         return None
@@ -46,6 +45,11 @@ class KeycloakAuthorizationBase(object):
         return user_obj._keycloak_perm_cache
 
     def get_keycloak_permissions(self, user_obj):
+        return set()
+        # FIXME: UNCOMMENT CODE BELLOW AND FIX ENTTITLMENT BUG
+        # https://issues.redhat.com/browse/KEYCLOAK-8353
+
+        
         if not hasattr(user_obj, 'oidc_profile'):
             return set()
 
