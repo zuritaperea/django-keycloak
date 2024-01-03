@@ -23,7 +23,7 @@ class KeycloakAuthorizationBase(object):
         UserModel = get_user_model()
 
         try:
-            user = UserModel.objects.select_related('oidc_profile__realm').get(
+            user = UserModel.objects.get(
                 pk=user_id)
         except UserModel.DoesNotExist:
             return None
