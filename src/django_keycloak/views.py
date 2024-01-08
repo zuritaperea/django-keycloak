@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import logging
 
 from django.shortcuts import resolve_url
+from django.views.decorators.csrf import csrf_exempt
 
 from django_keycloak.services.oidc_profile import get_remote_user_model
 
@@ -28,7 +29,7 @@ from django.views.generic.base import (
 from django_keycloak.models import Nonce, Server, Client, Realm
 from django_keycloak.auth import remote_user_login
 from urllib.parse import urlencode
-from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ class LoginComplete(RedirectView):
 
         return HttpResponseRedirect(nonce.next_path or '/')
 
-@csrf_exempt
+@method_decorator(csrf_exempt, name='dispatch')
 class Logout(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
