@@ -88,9 +88,9 @@ class LoginComplete(RedirectView):
                             redirect_uri=nonce.redirect_uri)
 
         if 'realm_name' in request.session:
-            realm_name = request.session.get('realm_name')
-            user.realm_name = realm_name
-            user.save(update_fields=['realm_name'])
+            realm_selected = request.session.get('realm_selected')
+            user.realm_selected = realm_selected
+            user.save(update_fields=['realm_selected'])
 
         RemoteUserModel = get_remote_user_model()
         if isinstance(user, RemoteUserModel):
