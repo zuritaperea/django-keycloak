@@ -152,4 +152,4 @@ class RealmAdmin(admin.ModelAdmin):
 
     )
 
-    readonly_fields = ('_well_known_oidc',)
+    #readonly_fields = ('_well_known_oidc',)
