@@ -40,8 +40,7 @@ class Login(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
 
         nonce = Nonce.objects.create(
-            redirect_uri=self.request.build_absolute_uri(
-                location=reverse('keycloak_login_complete')),
+            redirect_uri=f'{settings.SITE_URL}{reverse("keycloak_login_complete")}',
             next_path=self.request.GET.get('next'))
 
         self.request.session['oidc_state'] = str(nonce.state)
@@ -185,7 +184,7 @@ class Register(RedirectView):
                     "client_id": client.client_id,
                     "response_type": "code",
                     "scope": "openid email",
-                    "redirect_uri": self.request.build_absolute_uri(location=reverse('keycloak_login')),
+                    "redirect_uri": f'{settings.SITE_URL}{reverse("keycloak_login")}',
                     "kc_locale": lang if lang else 'ar',
                 }
             )
