@@ -1,4 +1,5 @@
 from django_keycloak.keycloak.mixins import WellKnownMixin
+from requests.auth import HTTPBasicAuth
 
 try:
     from urllib.parse import urlencode  # noqa: F041
@@ -300,11 +301,11 @@ class KeycloakOpenidConnect(WellKnownMixin):
             'client_id': self._client_id,
             'client_secret': self._client_secret
         }
+        user = payload.get('client_id')
+        pw = payload.get('client_secret')
 
+        auth = HTTPBasicAuth(user, pw)
         payload.update(**kwargs)
 
         return self._realm.client.post(self.get_url('token_endpoint'),
-                                       data=payload, headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json"
-            })
+                                       data=payload, auth=auth)
