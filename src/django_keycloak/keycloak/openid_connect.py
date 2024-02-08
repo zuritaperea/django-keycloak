@@ -289,9 +289,6 @@ class KeycloakOpenidConnect(WellKnownMixin):
             **kwargs
         )
 
-    import base64
-    import requests
-
     def _token_request(self, grant_type, **kwargs):
         """
         Do the actual call to the token end-point.
@@ -307,17 +304,22 @@ class KeycloakOpenidConnect(WellKnownMixin):
         }
         payload.update(**kwargs)
 
-        # Codificar las credenciales en base64
-        user = self._client_id
-        pw = self._client_secret
-        credentials = f"{user}:{pw}"
-        credentials_b64 = base64.b64encode(credentials.encode()).decode()
+        try:
+            response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
+            response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
+            return response.json()  # Devolver el contenido JSON de la respuesta
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 405:
+                # Si la respuesta es un error 405, intenta una solicitud alternativa
+                user = payload.get('client_id')
+                pw = payload.get('client_secret')
 
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': f'Basic {credentials_b64}',
-            'Accept': 'application/json'
-        }
+                auth = HTTPBasicAuth(user, pw)
+                del payload['client_secret']
 
-        return self._realm.client.post(self.get_url('token_endpoint'),
-                                       data=payload, headers=headers)
+                response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
+                response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
+                return response.json()  # Devolver el contenido JSON de la respuesta
+            else:
+                # Si el error no es un error 405, relanzar la excepción original
+                raise
