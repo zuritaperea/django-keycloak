@@ -11,7 +11,6 @@ PATH_WELL_KNOWN = "realms/{}/.well-known/openid-configuration"
 
 
 class KeycloakOpenidConnect(WellKnownMixin):
-
     _well_known = None
     _client_id = None
     _client_secret = None
@@ -138,10 +137,10 @@ class KeycloakOpenidConnect(WellKnownMixin):
         url = self.well_known['userinfo_endpoint']
 
         return self._realm.client.get(url, headers={
-                                          "Authorization": "Bearer {}".format(
-                                              token
-                                          )
-                                      })
+            "Authorization": "Bearer {}".format(
+                token
+            )
+        })
 
     def uma_ticket(self, token, **kwargs):
         """
@@ -305,4 +304,7 @@ class KeycloakOpenidConnect(WellKnownMixin):
         payload.update(**kwargs)
 
         return self._realm.client.post(self.get_url('token_endpoint'),
-                                       data=payload)
+                                       data=payload, headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            })
