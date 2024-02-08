@@ -310,8 +310,10 @@ class KeycloakOpenidConnect(WellKnownMixin):
             response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
             response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
             return response.json()  # Devolver el contenido JSON de la respuesta
-        except KeycloakClientError as err:
-            # Si la respuesta KeycloakClientError intenta una solicitud alternativa
+        except Exception as err:
+            if isinstance(err, KeycloakClientError) or (
+                    isinstance(err, requests.exceptions.HTTPError) and err.response.status_code == 405):
+            # Manejar el error específico de Keycloak o el error 405
             user = payload.get('client_id')
             pw = payload.get('client_secret')
 
