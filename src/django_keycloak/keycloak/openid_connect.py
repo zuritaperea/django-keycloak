@@ -306,17 +306,15 @@ class KeycloakOpenidConnect(WellKnownMixin):
         }
         payload.update(**kwargs)
 
-        try:
-            return self._realm.client.post(self.get_url('token_endpoint'), data=payload)
-        except:
-            user = payload.get('client_id')
-            pw = payload.get('client_secret')
 
-            auth = HTTPBasicAuth(user, pw)
-            response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
-            print('Respuesta: ', response)
-            response.raise_for_status()
-            print("Respuesta texto:", response.text)
-            if response.status_code == 405:
-                return None
-            return response.json()
+        user = payload.get('client_id')
+        pw = payload.get('client_secret')
+
+        auth = HTTPBasicAuth(user, pw)
+        response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
+        print('Respuesta: ', response)
+        response.raise_for_status()
+        print("Respuesta texto:", response.text)
+        if response.status_code == 405:
+            return None
+        return response.json()
