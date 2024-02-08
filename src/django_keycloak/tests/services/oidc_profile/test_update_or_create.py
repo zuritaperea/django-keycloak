@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from freezegun import freeze_time
-from keycloak.openid_connect import KeycloakOpenidConnect
+from django_keycloak.keycloak.openid_connect import KeycloakOpenidConnect
 
 from django_keycloak.factories import ClientFactory
 from django_keycloak.models import OpenIdConnectProfile

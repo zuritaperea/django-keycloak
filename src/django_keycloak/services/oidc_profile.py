@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
-from keycloak.exceptions import KeycloakClientError
+from django_keycloak.keycloak.exceptions import KeycloakClientError
 
 from django_keycloak.services.exceptions import TokensExpired
 from django_keycloak.remote_user import KeycloakRemoteUser
@@ -164,6 +164,8 @@ def update_or_create_from_code(code, client, redirect_uri):
     initiate_time = timezone.now()
     token_response = client.openid_api_client.authorization_code(
         code=code, redirect_uri=redirect_uri)
+
+
 
     return _update_or_create(client=client, token_response=token_response,
                               initiate_time=initiate_time)

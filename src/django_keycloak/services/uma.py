@@ -1,7 +1,7 @@
 from django.apps.registry import apps
 from django.utils.text import slugify
 
-from keycloak.exceptions import KeycloakClientError
+from django_keycloak.keycloak.exceptions import KeycloakClientError
 
 import django_keycloak.services.client
 
