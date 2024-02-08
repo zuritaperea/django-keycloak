@@ -1,6 +1,6 @@
 import json
 
-from keycloak.admin import KeycloakAdminBase
+from django_keycloak.keycloak.admin import KeycloakAdminBase
 
 
 class UserGroups(KeycloakAdminBase):

@@ -1,4 +1,4 @@
-from keycloak.well_known import KeycloakWellKnown
+from django_keycloak.keycloak.well_known import KeycloakWellKnown
 
 
 class WellKnownMixin(object):

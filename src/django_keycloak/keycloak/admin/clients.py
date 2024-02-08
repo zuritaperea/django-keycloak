@@ -1,4 +1,4 @@
-from keycloak.admin import KeycloakAdminBase
+from django_keycloak.keycloak.admin import KeycloakAdminBase
 
 __all__ = ('Client', 'Clients',)
 

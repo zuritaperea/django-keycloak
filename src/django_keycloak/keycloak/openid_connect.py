@@ -1,4 +1,4 @@
-from keycloak.mixins import WellKnownMixin
+from django_keycloak.keycloak.mixins import WellKnownMixin
 
 try:
     from urllib.parse import urlencode  # noqa: F041

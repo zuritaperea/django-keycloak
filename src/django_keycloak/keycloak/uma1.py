@@ -5,7 +5,7 @@ try:
 except ImportError:
     from urllib import urlencode  # noqa: F401
 
-from keycloak.mixins import WellKnownMixin
+from django_keycloak.keycloak.mixins import WellKnownMixin
 
 PATH_WELL_KNOWN = "realms/{}/.well-known/uma-configuration"
 

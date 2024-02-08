@@ -7,8 +7,8 @@ try:
 except ImportError:
     from urllib import urlencode  # noqa: F401
 
-from keycloak.mixins import WellKnownMixin
-from keycloak.exceptions import KeycloakClientError
+from django_keycloak.keycloak.mixins import WellKnownMixin
+from django_keycloak.keycloak.exceptions import KeycloakClientError
 
 PATH_ENTITLEMENT = "realms/{}/authz/entitlement/{}"
 

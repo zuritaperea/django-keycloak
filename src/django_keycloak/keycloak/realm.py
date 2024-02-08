@@ -1,9 +1,9 @@
-from keycloak.admin import KeycloakAdmin
-from keycloak.authz import KeycloakAuthz
-from keycloak.client import KeycloakClient
-from keycloak.openid_connect import KeycloakOpenidConnect
-from keycloak.uma import KeycloakUMA
-from keycloak.uma1 import KeycloakUMA1
+from django_keycloak.keycloak.admin import KeycloakAdmin
+from django_keycloak.keycloak.authz import KeycloakAuthz
+from django_keycloak.keycloak.client import KeycloakClient
+from django_keycloak.keycloak.openid_connect import KeycloakOpenidConnect
+from django_keycloak.keycloak.uma import KeycloakUMA
+from django_keycloak.keycloak.uma1 import KeycloakUMA1
 
 
 class KeycloakRealm(object):

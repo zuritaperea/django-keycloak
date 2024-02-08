@@ -1,5 +1,5 @@
-from keycloak.aio.mixins import WellKnownMixin
-from keycloak.openid_connect import (
+from django_keycloak.keycloak.aio.mixins import WellKnownMixin
+from django_keycloak.keycloak.openid_connect import (
     KeycloakOpenidConnect as SyncKeycloakOpenidConnect,
     PATH_WELL_KNOWN,
 )
