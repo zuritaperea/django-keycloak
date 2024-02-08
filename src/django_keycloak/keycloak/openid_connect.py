@@ -1,6 +1,7 @@
 from django_keycloak.keycloak.mixins import WellKnownMixin
 from requests.auth import HTTPBasicAuth
-
+import base64
+import requests
 try:
     from urllib.parse import urlencode  # noqa: F041
 except ImportError:
@@ -288,6 +289,9 @@ class KeycloakOpenidConnect(WellKnownMixin):
             **kwargs
         )
 
+    import base64
+    import requests
+
     def _token_request(self, grant_type, **kwargs):
         """
         Do the actual call to the token end-point.
@@ -301,14 +305,17 @@ class KeycloakOpenidConnect(WellKnownMixin):
             'client_id': self._client_id,
             'client_secret': self._client_secret
         }
-        user = payload.get('client_id')
-        pw = payload.get('client_secret')
-
-        auth = HTTPBasicAuth(user, pw)
         payload.update(**kwargs)
+
+        # Codificar las credenciales en base64
+        user = self._client_id
+        pw = self._client_secret
+        credentials = f"{user}:{pw}"
+        credentials_b64 = base64.b64encode(credentials.encode()).decode()
+
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': auth,
+            'Authorization': f'Basic {credentials_b64}',
             'Accept': 'application/json'
         }
 
