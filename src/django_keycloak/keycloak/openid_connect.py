@@ -307,9 +307,7 @@ class KeycloakOpenidConnect(WellKnownMixin):
         payload.update(**kwargs)
 
         try:
-            response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
-            response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-            return response.json()  # Devolver el contenido JSON de la respuesta
+            return self._realm.client.post(self.get_url('token_endpoint'), data=payload)
         except (KeycloakClientError, requests.exceptions.HTTPError) as err:
             if isinstance(err, KeycloakClientError):
                 # Manejar el error específico de Keycloak
@@ -322,9 +320,8 @@ class KeycloakOpenidConnect(WellKnownMixin):
                 auth = HTTPBasicAuth(user, pw)
                 del payload['client_secret']
 
-                response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
-                response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-                return response.json()  # Devolver el contenido JSON de la respuesta
+                return requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
+
             else:
                 # Si el error no es un error de Keycloak o un error 405, relanzar la excepción original
                 raise
