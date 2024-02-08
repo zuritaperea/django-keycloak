@@ -306,6 +306,11 @@ class KeycloakOpenidConnect(WellKnownMixin):
 
         auth = HTTPBasicAuth(user, pw)
         payload.update(**kwargs)
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': auth,
+            'Accept': 'application/json'
+        }
 
         return self._realm.client.post(self.get_url('token_endpoint'),
-                                       data=payload, auth=auth)
+                                       data=payload, headers=headers)
