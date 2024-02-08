@@ -1,7 +1,9 @@
+from django_keycloak.keycloak.exceptions import KeycloakClientError
 from django_keycloak.keycloak.mixins import WellKnownMixin
 from requests.auth import HTTPBasicAuth
 import base64
 import requests
+
 try:
     from urllib.parse import urlencode  # noqa: F041
 except ImportError:
@@ -308,18 +310,16 @@ class KeycloakOpenidConnect(WellKnownMixin):
             response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
             response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
             return response.json()  # Devolver el contenido JSON de la respuesta
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 405:
-                # Si la respuesta es un error 405, intenta una solicitud alternativa
-                user = payload.get('client_id')
-                pw = payload.get('client_secret')
+        except KeycloakClientError as err:
+            # Si la respuesta KeycloakClientError intenta una solicitud alternativa
+            user = payload.get('client_id')
+            pw = payload.get('client_secret')
 
-                auth = HTTPBasicAuth(user, pw)
-                del payload['client_secret']
+            auth = HTTPBasicAuth(user, pw)
+            del payload['client_secret']
 
-                response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
-                response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-                return response.json()  # Devolver el contenido JSON de la respuesta
-            else:
-                # Si el error no es un error 405, relanzar la excepción original
-                raise
+            response = requests.post(self.get_url('token_endpoint'), data=payload, auth=auth)
+            response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
+            return response.json()  # Devolver el contenido JSON de la respuesta
+        else:
+            raise
