@@ -334,3 +334,7 @@ class KeycloakOpenidConnect(WellKnownMixin):
             else:
                 # Si el error no es un error 405, relanzar la excepción original
                 raise
+        except KeycloakClientError as keycloak_err:
+            # Manejar el error específico de Keycloak
+            print("Error de Keycloak:", keycloak_err)
+            raise  # Relanzar la excepción para que la maneje el código que llama a este método
