@@ -313,35 +313,27 @@ class KeycloakOpenidConnect(WellKnownMixin):
                 # intenta una solicitud alternativa
                 user = payload.get('client_id')
                 pw = payload.get('client_secret')
-                credentials = f"{user}:{pw}"
-                credentials_b64 = base64.b64encode(credentials.encode()).decode()
-
-                headers = {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': f'Basic {credentials_b64}',
-                    'Accept': 'application/json'
-                }
 
                 auth = HTTPBasicAuth(user, pw)
                 response = requests.post(
                     token_endpoint_url,
                     data=payload,
-                    headers=headers
+                    auth=auth,
+                    verify=True,
+                    timeout=None,
+                    proxies=None
                 )
                 print('Respuesta: ', response)
                 response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
 
                 print("Respuesta texto:", response.text)
 
-                if response.status_code == 405:
-                    return None
                 return response.json()
+
             else:
                 # Si la URL del punto final del token contiene la palabra 'realm',
                 # realiza la solicitud original
-                response = self._realm.client.post(token_endpoint_url, data=payload)
-                response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-                return response.json()  # Devolver el contenido JSON de la respuesta
+                return self._realm.client.post(token_endpoint_url, data=payload)
         except (requests.exceptions.HTTPError, KeycloakClientError) as err:
             # Manejar cualquier error HTTP o de Keycloak
             raise
