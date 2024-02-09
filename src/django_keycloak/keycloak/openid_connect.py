@@ -307,7 +307,9 @@ class KeycloakOpenidConnect(WellKnownMixin):
         payload.update(**kwargs)
 
         try:
-            return self._realm.client.post(self.get_url('token_endpoint'), data=payload)
+            response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
+            response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
+            return response.json()  # Devolver el contenido JSON de la respuesta
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == 405:
                 # Si la respuesta es un error 405, intenta una solicitud alternativa
