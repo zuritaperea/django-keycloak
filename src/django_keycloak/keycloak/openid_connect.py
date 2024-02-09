@@ -307,18 +307,16 @@ class KeycloakOpenidConnect(WellKnownMixin):
         payload.update(**kwargs)
 
         try:
-            response = self._realm.client.post(self.get_url('token_endpoint'), data=payload)
-            response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-            return response.json()  # Devolver el contenido JSON de la respuesta
-        except (requests.exceptions.HTTPError, KeycloakClientError) as err:
-            if isinstance(err, requests.exceptions.HTTPError) and err.response.status_code == 405:
-                # Si la respuesta es un error 405, intenta una solicitud alternativa
+            token_endpoint_url = self.get_url('token_endpoint')
+            if 'realm' not in token_endpoint_url:
+                # Si la URL del punto final del token no contiene la palabra 'realm',
+                # intenta una solicitud alternativa
                 user = payload.get('client_id')
                 pw = payload.get('client_secret')
 
                 auth = HTTPBasicAuth(user, pw)
                 response = requests.post(
-                    self.get_url('token_endpoint'),
+                    token_endpoint_url,
                     data=payload,
                     auth=auth,
                     verify=True,
@@ -334,5 +332,11 @@ class KeycloakOpenidConnect(WellKnownMixin):
                     return None
                 return response.json()
             else:
-                # Si el error no es un error 405, relanzar la excepción original
-                raise
+                # Si la URL del punto final del token contiene la palabra 'realm',
+                # realiza la solicitud original
+                response = self._realm.client.post(token_endpoint_url, data=payload)
+                response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
+                return response.json()  # Devolver el contenido JSON de la respuesta
+        except (requests.exceptions.HTTPError, KeycloakClientError) as err:
+            # Manejar cualquier error HTTP o de Keycloak
+            raise
