@@ -319,7 +319,7 @@ class KeycloakOpenidConnect(WellKnownMixin):
                     token_endpoint_url,
                     data=payload,
                     auth=auth,
-                    verify=True,
+                    verify=False,
                     timeout=None,
                     proxies=None
                 )
