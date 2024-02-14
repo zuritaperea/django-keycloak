@@ -9,11 +9,12 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
+from jose import JWTError
+
 from django_keycloak.keycloak.exceptions import KeycloakClientError
 
 from django_keycloak.services.exceptions import TokensExpired
 from django_keycloak.remote_user import KeycloakRemoteUser
-
 
 import django_keycloak.services.realm
 
@@ -86,13 +87,13 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
     OpenIdConnectProfileModel = get_openid_connect_profile_model()
 
     if OpenIdConnectProfileModel.is_remote:
-        oidc_profile, _ = OpenIdConnectProfileModel.objects.\
+        oidc_profile, _ = OpenIdConnectProfileModel.objects. \
             update_or_create(
-                sub=id_token_object['sub'],
-                defaults={
-                    'realm': client.realm
-                }
-            )
+            sub=id_token_object['sub'],
+            defaults={
+                'realm': client.realm
+            }
+        )
 
         UserModel = get_remote_user_model()
         oidc_profile.user = UserModel(id_token_object)
@@ -103,7 +104,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
         UserModel = get_user_model()
         email_field_name = UserModel.get_email_field_name()
         user, _ = UserModel.objects.update_or_create(
-            username=id_token_object['preferred_username'], # modified to map with the username
+            username=id_token_object['preferred_username'],  # modified to map with the username
             defaults={
                 email_field_name: id_token_object.get('email', ''),
                 'first_name': id_token_object.get('given_name', ''),
@@ -165,10 +166,8 @@ def update_or_create_from_code(code, client, redirect_uri):
     token_response = client.openid_api_client.authorization_code(
         code=code, redirect_uri=redirect_uri)
 
-
-
     return _update_or_create(client=client, token_response=token_response,
-                              initiate_time=initiate_time)
+                             initiate_time=initiate_time)
 
 
 def update_or_create_from_password_credentials(username, password, client):
@@ -194,6 +193,24 @@ def update_or_create_from_password_credentials(username, password, client):
                              initiate_time=initiate_time)
 
 
+def get_issuer(realm):
+    """
+    Get the issuer of a realm.
+
+    :param django_keycloak.models.Realm realm:
+    :rtype: str
+    """
+    # Obtener el issuer del realm
+    issuer = realm.get_well_known_oidc().get('issuer')
+
+    # Si el issuer comienza con 'http://', también agregar una versión HTTPS
+    if issuer.startswith('http://'):
+        issuer_https = issuer.replace('http://', 'https://', 1)
+        return [issuer, issuer_https]
+    else:
+        return issuer
+
+
 def _update_or_create(client, token_response, initiate_time):
     """
     Update or create an user based on a token response.
@@ -211,27 +228,34 @@ def _update_or_create(client, token_response, initiate_time):
     :param datetime.datetime initiate_time:
     :rtype: django_keycloak.models.OpenIdConnectProfile
     """
-    issuer = django_keycloak.services.realm.get_issuer(client.realm)
+    issuers = django_keycloak.services.realm.get_issuer(client.realm)
 
     token_response_key = 'id_token' if 'id_token' in token_response \
         else 'access_token'
 
-    token_object = client.openid_api_client.decode_token(
-        token=token_response[token_response_key],
-        key=client.realm.certs,
-        algorithms=client.openid_api_client.well_known[
-            'id_token_signing_alg_values_supported'],
-        issuer=issuer,
-        access_token=token_response["access_token"], # modified to fix the issue https://github.com/Peter-Slump/django-keycloak/issues/57
-    )
+    for issuer in issuers:
+        try:
+            token_object = client.openid_api_client.decode_token(
+                token=token_response[token_response_key],
+                key=client.realm.certs,
+                algorithms=client.openid_api_client.well_known[
+                    'id_token_signing_alg_values_supported'],
+                issuer=issuer,
+                access_token=token_response["access_token"]
+            )
 
-    oidc_profile = update_or_create_user_and_oidc_profile(
-        client=client,
-        id_token_object=token_object)
+            oidc_profile = update_or_create_user_and_oidc_profile(
+                client=client,
+                id_token_object=token_object)
 
-    return update_tokens(token_model=oidc_profile,
-                         token_response=token_response,
-                         initiate_time=initiate_time)
+            return update_tokens(token_model=oidc_profile,
+                                 token_response=token_response,
+                                 initiate_time=initiate_time)
+        except JWTError:
+            continue
+
+        # Si no se puede decodificar el token con ninguno de los issuers
+    raise Exception("No se pudo decodificar el token con ninguno de los issuers disponibles")
 
 
 def update_tokens(token_model, token_response, initiate_time):
@@ -279,7 +303,7 @@ def get_active_access_token(oidc_profile):
 
     if initiate_time > oidc_profile.expires_before:
         # Refresh token
-        token_response = oidc_profile.realm.client.openid_api_client\
+        token_response = oidc_profile.realm.client.openid_api_client \
             .refresh_token(refresh_token=oidc_profile.refresh_token)
 
         oidc_profile = update_tokens(token_model=oidc_profile,
