@@ -193,24 +193,6 @@ def update_or_create_from_password_credentials(username, password, client):
                              initiate_time=initiate_time)
 
 
-def get_issuer(realm):
-    """
-    Get the issuer of a realm.
-
-    :param django_keycloak.models.Realm realm:
-    :rtype: str
-    """
-    # Obtener el issuer del realm
-    issuer = realm.get_well_known_oidc().get('issuer')
-
-    # Si el issuer comienza con 'http://', también agregar una versión HTTPS
-    if issuer.startswith('http://'):
-        issuer_https = issuer.replace('http://', 'https://', 1)
-        return [issuer, issuer_https]
-    else:
-        return issuer
-
-
 def _update_or_create(client, token_response, initiate_time):
     """
     Update or create an user based on a token response.
@@ -228,7 +210,11 @@ def _update_or_create(client, token_response, initiate_time):
     :param datetime.datetime initiate_time:
     :rtype: django_keycloak.models.OpenIdConnectProfile
     """
-    issuers = django_keycloak.services.realm.get_issuer(client.realm)
+    issuer = django_keycloak.services.realm.get_issuer(client.realm)
+    issuers = []
+    if issuer.startswith('http://'):
+        issuer_https = issuer.replace('http://', 'https://', 1)
+        issuers = [issuer, issuer_https]
 
     token_response_key = 'id_token' if 'id_token' in token_response \
         else 'access_token'
