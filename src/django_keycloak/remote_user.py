@@ -16,6 +16,10 @@ class KeycloakRemoteUser(object):
     last_name = ''
     email = ''
     password = ''
+    cuil = ''
+    gender = ''
+    birthdate = ''
+    dni = ''
     groups = []
     user_permissions = []
 
@@ -30,6 +34,9 @@ class KeycloakRemoteUser(object):
         self.email = userinfo.get('email', '')
         self.first_name = userinfo.get('given_name', '')
         self.last_name = userinfo.get('family_name', '')
+        self.cuil = userinfo.get('zoneinfo', '')
+        self.dni = userinfo.get('locale', '')
+        self.birthdate = userinfo.get('birthdate', '')
         self.sub = userinfo['sub']
 
     def __str__(self):
