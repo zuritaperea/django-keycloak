@@ -323,11 +323,8 @@ class KeycloakOpenidConnect(WellKnownMixin):
                     timeout=None,
                     proxies=None
                 )
-                print('Respuesta: ', response)
                 response.raise_for_status()  # Lanzar una excepción si hay un error HTTP
-
                 print("Respuesta texto:", response.text)
-
                 return response.json()
 
             else:

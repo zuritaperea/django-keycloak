@@ -265,7 +265,7 @@ def update_tokens(token_model, token_response, initiate_time):
         refresh_expires_before = initiate_time + timedelta(
             seconds=refresh_expires_in)
     else:
-        refresh_expires_before = None
+        refresh_expires_before = initiate_time + timedelta(minutes=5)
 
     token_model.access_token = token_response['access_token']
     token_model.expires_before = expires_before
