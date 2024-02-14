@@ -216,6 +216,10 @@ def _update_or_create(client, token_response, initiate_time):
         issuer_https = issuer.replace('http://', 'https://', 1)
         issuers = [issuer, issuer_https]
 
+    if issuer.startswith('https://'):
+        issuer_https = issuer.replace('https://', 'http://', 1)
+        issuers = [issuer, issuer_https]
+
     token_response_key = 'id_token' if 'id_token' in token_response \
         else 'access_token'
 
