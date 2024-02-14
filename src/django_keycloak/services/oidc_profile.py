@@ -259,8 +259,13 @@ def update_tokens(token_model, token_response, initiate_time):
     """
     expires_before = initiate_time + timedelta(
         seconds=token_response['expires_in'])
-    refresh_expires_before = initiate_time + timedelta(
-        seconds=token_response['refresh_expires_in'])
+    # Manejo del caso en el que 'refresh_expires_in' no está presente en token_response
+    refresh_expires_in = token_response.get('refresh_expires_in')
+    if refresh_expires_in is not None:
+        refresh_expires_before = initiate_time + timedelta(
+            seconds=refresh_expires_in)
+    else:
+        refresh_expires_before = None
 
     token_model.access_token = token_response['access_token']
     token_model.expires_before = expires_before
