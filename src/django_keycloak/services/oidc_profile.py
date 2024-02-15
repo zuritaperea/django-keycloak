@@ -130,7 +130,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
             )
         if hasattr(UserModel, 'persona') and created:
             persona_class_name = user._meta.get_field('persona').related_model.__name__
-
+            print('persona class name: ', persona_class_name)
             # Verificar si la clase Persona está disponible
             if hasattr(models, persona_class_name):
                 # Obtener la clase Persona
