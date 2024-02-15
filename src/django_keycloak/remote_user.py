@@ -36,6 +36,7 @@ class KeycloakRemoteUser(object):
         self.last_name = userinfo.get('family_name', '')
         self.cuil = userinfo.get('zoneinfo', '')
         self.dni = userinfo.get('locale', '')
+        self.gender = userinfo.get('gender', '')
         self.birthdate = userinfo.get('birthdate', '')
         self.sub = userinfo['sub']
 
