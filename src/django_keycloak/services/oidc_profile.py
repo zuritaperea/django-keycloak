@@ -128,7 +128,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                     'last_name': id_token_object.get('family_name', ''),
                 }
             )
-        if hasattr(user, 'persona') and created:
+        if hasattr(UserModel, 'persona') and created:
             persona_class_name = user._meta.get_field('persona').related_model.__name__
 
             # Verificar si la clase Persona está disponible
