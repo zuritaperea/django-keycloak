@@ -145,7 +145,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                                                        '') if 'cuit' in id_token_object else id_token_object.get(
                     'zoneinfo', '')
                 genero = id_token_object.get('gender', '')
-                fecha_nacimiento = id_token_object.get('birthdate', '')
+                fecha_nacimiento = id_token_object.get('birthdate', None)
                 documento_identidad = id_token_object.get('locale', '')
                 correo_electronico = id_token_object.get('email', '')
 
