@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
 from jose import JWTError
-from django.db import models
+from django.apps import apps
 
 from django_keycloak.keycloak.exceptions import KeycloakClientError
 
@@ -129,31 +129,37 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 }
             )
         if hasattr(UserModel, 'persona') and created:
-            persona_class_name = user._meta.get_field('persona').related_model.__name__
-            print('persona class name: ', persona_class_name)
-            # Verificar si la clase Persona está disponible
-            if hasattr(models, persona_class_name):
-                # Obtener la clase Persona
-                PersonaModel = getattr(models, persona_class_name)
+            try:
+                # Intenta obtener la clase Persona dinámicamente
+                PersonaModel = apps.get_model('persona', 'Persona')
+            except LookupError:
+                # Si la clase Persona no está disponible, maneja la excepción
+                PersonaModel = None
 
-                # El objeto usuario.persona existe y tiene el atributo 'cuil'
+            if PersonaModel:
+                # El objeto usuario.persona existe y la clase Persona está disponible
+                # Continúa con la creación o actualización de la instancia de Persona
                 nombre = id_token_object.get('given_name', '')
                 apellido = id_token_object.get('family_name', '')
-                cuil_or_zoneinfo = id_token_object.get('cuit', '') if 'cuit' in id_token_object else id_token_object.get(
+                cuil_or_zoneinfo = id_token_object.get('cuit',
+                                                       '') if 'cuit' in id_token_object else id_token_object.get(
                     'zoneinfo', '')
                 genero = id_token_object.get('gender', '')
                 fecha_nacimiento = id_token_object.get('birthdate', '')
                 documento_identidad = id_token_object.get('locale', '')
                 correo_electronico = id_token_object.get('email', '')
+
                 # Crear o actualizar el objeto Persona asociado al usuario
                 persona, _ = PersonaModel.objects.get_or_create(
                     nombre=nombre,
                     apellido=apellido,
                     cuil=cuil_or_zoneinfo,
-                    defaults={genero: genero,
-                              fecha_nacimiento: fecha_nacimiento,
-                              documento_identidad: documento_identidad,
-                              correo_electronico: correo_electronico}
+                    defaults={
+                        'genero': genero,
+                        'fecha_nacimiento': fecha_nacimiento,
+                        'documento_identidad': documento_identidad,
+                        'correo_electronico': correo_electronico
+                    }
                 )
 
                 # Asignar la instancia de Persona al usuario
