@@ -1,4 +1,5 @@
 from datetime import timedelta
+import datetime
 
 import logging
 
@@ -148,7 +149,8 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 fecha_nacimiento = id_token_object.get('birthdate', None)
                 documento_identidad = id_token_object.get('locale', '')
                 correo_electronico = id_token_object.get('email', '')
-
+                if not isinstance(fecha_nacimiento, datetime.date):
+                    fecha_nacimiento = None
                 # Crear o actualizar el objeto Persona asociado al usuario
                 persona, _ = PersonaModel.objects.get_or_create(
                     nombre=nombre,
