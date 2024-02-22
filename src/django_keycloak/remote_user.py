@@ -20,6 +20,9 @@ class KeycloakRemoteUser(object):
     gender = ''
     birthdate = ''
     dni = ''
+    domicilio = ''
+    fecha_nacimiento = ''
+    sexo = ''
     groups = []
     user_permissions = []
 
@@ -34,13 +37,11 @@ class KeycloakRemoteUser(object):
         self.email = userinfo.get('email', '')
         self.first_name = userinfo.get('given_name', '')
         self.last_name = userinfo.get('family_name', '')
-        if 'cuit' in userinfo:
-            self.cuil = userinfo['cuit']
-        else:
-            self.cuil = userinfo.get('zoneinfo', '')
-        self.dni = userinfo.get('locale', '')
-        self.gender = userinfo.get('gender', '')
-        self.birthdate = userinfo.get('birthdate', '')
+        self.cuil = userinfo.get('cuit', userinfo.get('zoneinfo', ''))
+        self.dni = userinfo.get('numero_dni', userinfo.get('dni', userinfo.get('locale', '')))
+        self.gender = userinfo.get('gender', userinfo.get('sexo', '')).lower()
+        self.birthdate = userinfo.get('birthdate', userinfo.get('fecha_nacimiento', ''))
+        self.domicilio = userinfo.get('domicilio', '')
         self.sub = userinfo['sub']
 
     def __str__(self):
