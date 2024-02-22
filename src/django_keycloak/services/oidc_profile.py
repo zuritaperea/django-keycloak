@@ -146,6 +146,8 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                                                                                                              '')
                 genero = id_token_object.get('gender', '') if 'gender' in id_token_object else id_token_object.get(
                     'sexo', '')
+                if genero:
+                    genero = genero.lower
                 fecha_nacimiento = id_token_object.get('fecha_nacimiento',
                                                        None) if 'fecha_nacimiento' in id_token_object else id_token_object.get(
                     'birthdate', None)
