@@ -142,18 +142,12 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 # Continúa con la creación o actualización de la instancia de Persona
                 nombre = id_token_object.get('given_name', '')
                 apellido = id_token_object.get('family_name', '')
-                cuil = id_token_object.get('cuit', '') if 'cuit' in id_token_object else id_token_object.get('zoneinfo',
-                                                                                                             '')
+                cuil = id_token_object.get('cuit', id_token_object.get('zoneinfo', ''))
                 genero = id_token_object.get('sexo', id_token_object.get('gender', ''))
-
                 genero = genero.lower() if genero else ''
-
-                fecha_nacimiento = id_token_object.get('fecha_nacimiento',
-                                                       None) if 'fecha_nacimiento' in id_token_object else id_token_object.get(
-                    'birthdate', None)
+                fecha_nacimiento = id_token_object.get('fecha_nacimiento', id_token_object.get('birthdate', None))
                 documento_identidad = id_token_object.get('numero_dni',
-                                                          '') if 'numero_dni' in id_token_object else id_token_object.get(
-                    'dni', '') if 'dni' in id_token_object else id_token_object.get('locale', '')
+                                                          id_token_object.get('dni', id_token_object.get('locale', '')))
                 correo_electronico = id_token_object.get('email', '')
                 domicilio = id_token_object.get('domicilio', '')
 
