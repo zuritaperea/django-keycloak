@@ -142,30 +142,39 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 # Continúa con la creación o actualización de la instancia de Persona
                 nombre = id_token_object.get('given_name', '')
                 apellido = id_token_object.get('family_name', '')
-                cuil_or_zoneinfo = id_token_object.get('cuit',
-                                                       '') if 'cuit' in id_token_object else id_token_object.get(
-                    'zoneinfo', '')
-                genero = id_token_object.get('gender', '')
-                fecha_nacimiento = id_token_object.get('birthdate', None)
-                documento_identidad = id_token_object.get('locale', '')
+                cuil = id_token_object.get('cuit', '') if 'cuit' in id_token_object else id_token_object.get('zoneinfo',
+                                                                                                             '')
+                genero = id_token_object.get('gender', '') if 'gender' in id_token_object else id_token_object.get(
+                    'sexo', '')
+                fecha_nacimiento = id_token_object.get('fecha_nacimiento',
+                                                       None) if 'fecha_nacimiento' in id_token_object else id_token_object.get(
+                    'birthdate', None)
+                documento_identidad = id_token_object.get('numero_dni',
+                                                          '') if 'numero_dni' in id_token_object else id_token_object.get(
+                    'dni', '') if 'dni' in id_token_object else id_token_object.get('locale', '')
                 correo_electronico = id_token_object.get('email', '')
+                domicilio = id_token_object.get('domicilio', '')
+
                 if not isinstance(fecha_nacimiento, datetime.date):
                     fecha_nacimiento = None
                 # Crear o actualizar el objeto Persona asociado al usuario
                 persona, _ = PersonaModel.objects.get_or_create(
                     nombre=nombre,
                     apellido=apellido,
-                    cuil=cuil_or_zoneinfo,
+                    cuil=cuil,
                     defaults={
                         'genero': genero,
                         'fecha_nacimiento': fecha_nacimiento,
                         'documento_identidad': documento_identidad,
-                        'correo_electronico': correo_electronico
+                        'correo_electronico': correo_electronico,
+                        'domicilio': domicilio
                     }
                 )
 
                 # Asignar la instancia de Persona al usuario
                 user.persona = persona
+                if correo_electronico and hasattr(user, 'email'):
+                    user.email = correo_electronico
                 user.save()
 
         oidc_profile, _ = OpenIdConnectProfileModel.objects.update_or_create(
