@@ -98,11 +98,13 @@ class LoginComplete(RedirectView):
             login(request, user)
 
         nonce.delete()
+        if nonce.next_path:
+            return HttpResponseRedirect(nonce.next_path)
 
-        if settings.LOGIN_REDIRECT_URL:
+        elif settings.LOGIN_REDIRECT_URL:
             return HttpResponseRedirect(resolve_url(settings.LOGIN_REDIRECT_URL))
 
-        return HttpResponseRedirect(nonce.next_path or '/')
+        return HttpResponseRedirect('/')
 
 @method_decorator(csrf_exempt, name='dispatch')
 class Logout(RedirectView):
