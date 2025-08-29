@@ -1,5 +1,4 @@
-from datetime import timedelta
-import datetime
+from datetime import timedelta, datetime
 
 import logging
 
@@ -107,8 +106,15 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
         email_field_name = UserModel.get_email_field_name()
 
         if hasattr(UserModel, 'cuil'):
-            cuil_or_zoneinfo = id_token_object.get('cuit', '') if 'cuit' in id_token_object else id_token_object.get(
-                'zoneinfo', '')
+            cuil = (
+                    id_token_object.get('cuit')
+                    or id_token_object.get('cuil')
+                    or id_token_object.get('zoneinfo', '')
+                    or id_token_object.get('preferred_username', '')
+            )
+            cuil = cuil.strip() if cuil else ''
+
+
             # El modelo de usuario tiene el atributo 'cuil', podemos usarlo
             user, created = UserModel.objects.update_or_create(
                 username=id_token_object['preferred_username'],
@@ -116,7 +122,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                     email_field_name: id_token_object.get('email', ''),
                     'first_name': id_token_object.get('given_name', ''),
                     'last_name': id_token_object.get('family_name', ''),
-                    'cuil': cuil_or_zoneinfo,
+                    'cuil': cuil,
                 }
             )
         else:
@@ -142,23 +148,35 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 # Continúa con la creación o actualización de la instancia de Persona
                 nombre = id_token_object.get('given_name', '')
                 apellido = id_token_object.get('family_name', '')
-                cuil = id_token_object.get('cuit', id_token_object.get('zoneinfo', ''))
+                cuil = (
+                        id_token_object.get('cuit')
+                        or id_token_object.get('cuil')
+                        or id_token_object.get('zoneinfo', '')
+                        or id_token_object.get('preferred_username', '')
+                )
+                cuil = cuil.strip()
                 genero = id_token_object.get('sexo', id_token_object.get('gender', ''))
                 genero = genero.lower() if genero else ''
-                fecha_nacimiento = id_token_object.get('fecha_nacimiento', id_token_object.get('birthdate', None))
                 documento_identidad = id_token_object.get('numero_dni',
                                                           id_token_object.get('dni', id_token_object.get('locale', '')))
                 correo_electronico = id_token_object.get('email', '')
                 domicilio = id_token_object.get('domicilio', '')
 
-                if not isinstance(fecha_nacimiento, datetime.date):
-                    fecha_nacimiento = None
+
+                fecha_str = id_token_object.get('fecha_nacimiento') or id_token_object.get('birthdate')
+                fecha_nacimiento = None
+
+                if fecha_str and isinstance(fecha_str, str):
+                    try:
+                        fecha_nacimiento = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        pass
                 # Crear o actualizar el objeto Persona asociado al usuario
-                persona, _ = PersonaModel.objects.get_or_create(
-                    nombre=nombre,
-                    apellido=apellido,
+                persona, _ = PersonaModel.objects.update_or_create(
                     cuil=cuil,
                     defaults={
+                        'nombre': nombre,
+                        'apellido': apellido,
                         'genero': genero,
                         'fecha_nacimiento': fecha_nacimiento,
                         'documento_identidad': documento_identidad,

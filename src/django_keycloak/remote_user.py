@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib import auth
 from django.core.exceptions import PermissionDenied
 
@@ -40,9 +42,16 @@ class KeycloakRemoteUser(object):
         self.cuil = userinfo.get('cuit', userinfo.get('zoneinfo', ''))
         self.dni = userinfo.get('numero_dni', userinfo.get('dni', userinfo.get('locale', '')))
         self.gender = userinfo.get('gender', userinfo.get('sexo', '')).lower()
-        self.birthdate = userinfo.get('birthdate', userinfo.get('fecha_nacimiento', ''))
+        self.birthdate = self.parse_date(userinfo.get('birthdate', userinfo.get('fecha_nacimiento', '')))
         self.domicilio = userinfo.get('domicilio', '')
         self.sub = userinfo['sub']
+
+    @staticmethod
+    def parse_date(date_str):
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return None
 
     def __str__(self):
         return self.username
