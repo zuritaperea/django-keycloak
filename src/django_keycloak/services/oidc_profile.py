@@ -135,7 +135,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                     'last_name': id_token_object.get('family_name', ''),
                 }
             )
-        if hasattr(UserModel, 'persona') and created:
+        if hasattr(UserModel, 'persona'):
             try:
                 # Intenta obtener la clase Persona dinámicamente
                 PersonaModel = apps.get_model('persona', 'Persona')
