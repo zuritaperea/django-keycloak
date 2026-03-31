@@ -157,11 +157,34 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 cuil = cuil.strip()
                 genero = id_token_object.get('sexo', id_token_object.get('gender', ''))
                 genero = genero.lower() if genero else ''
-                documento_identidad = id_token_object.get('numero_dni',
-                                                          id_token_object.get('dni', id_token_object.get('locale', '')))
-                correo_electronico = id_token_object.get('email', '')
-                domicilio = id_token_object.get('domicilio', '')
 
+                # --- MEJORAS DE FALLBACKS ---
+
+                # 1. Fallbacks para Documento de Identidad
+                documento_identidad = (
+                        id_token_object.get('documento_identidad')
+                        or id_token_object.get('numero_dni')
+                        or id_token_object.get('dni')
+                        or id_token_object.get('locale', '')
+                )
+
+                # 2. Fallbacks para Correo Electrónico
+                correo_electronico = (
+                        id_token_object.get('email')
+                        or id_token_object.get('email_verified')
+                        or id_token_object.get('correo_electronico', '')
+                )
+
+                # 3. Extracción de Teléfono con múltiples opciones
+                telefono_numero = (
+                        id_token_object.get('phone_number_mobile')
+                        or id_token_object.get('phone_number')
+                        or id_token_object.get('phone')
+                        or id_token_object.get('celular')
+                        or id_token_object.get('telefono', '')
+                )
+
+                domicilio = id_token_object.get('domicilio', '')
 
                 fecha_str = id_token_object.get('fecha_nacimiento') or id_token_object.get('birthdate')
                 fecha_nacimiento = None
@@ -171,6 +194,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                         fecha_nacimiento = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                     except ValueError:
                         pass
+
                 # Crear o actualizar el objeto Persona asociado al usuario
                 persona, _ = PersonaModel.objects.update_or_create(
                     cuil=cuil,
@@ -190,6 +214,30 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 if correo_electronico and hasattr(user, 'email'):
                     user.email = correo_electronico
                 user.save()
+
+                # --- GUARDADO DINÁMICO DEL TELÉFONO ---
+                if telefono_numero:
+                    try:
+                        # Obtenemos el modelo de Teléfono y ContentType dinámicamente
+                        TelefonoModel = apps.get_model('util', 'Telefono')
+                        ContentType = apps.get_model('contenttypes', 'ContentType')
+                    except LookupError:
+                        TelefonoModel = None
+                        ContentType = None
+
+                    if TelefonoModel and ContentType:
+                        # Obtenemos el identificador del modelo Persona
+                        persona_content_type = ContentType.objects.get_for_model(PersonaModel)
+
+                        # Creamos o actualizamos el teléfono del tipo 'celular' para esta persona
+                        TelefonoModel.objects.update_or_create(
+                            content_type=persona_content_type,
+                            object_id=persona.id,
+                            tipo='celular',  # Valor constante definido en tu modelo (CELULAR = 'celular')
+                            defaults={
+                                'numero': telefono_numero
+                            }
+                        )
 
         oidc_profile, _ = OpenIdConnectProfileModel.objects.update_or_create(
             sub=id_token_object['sub'],
