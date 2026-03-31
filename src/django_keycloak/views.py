@@ -48,7 +48,7 @@ class Login(RedirectView):
         authorization_url = self.request.realm.client.openid_api_client\
             .authorization_url(
                 redirect_uri=nonce.redirect_uri,
-                scope='openid profile email', # modified from 'openid given_name family_name email' to fix invaild scopes issue https://github.com/oauth2-proxy/oauth2-proxy/issues/1448
+                scope='openid profile email phone', # modified from 'openid given_name family_name email' to fix invaild scopes issue https://github.com/oauth2-proxy/oauth2-proxy/issues/1448
                 state=str(nonce.state)
             )
 
