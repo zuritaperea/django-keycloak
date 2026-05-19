@@ -231,8 +231,8 @@ class OpenIdConnectProfile(OpenIdConnectProfileAbstract):
 class Nonce(models.Model):
 
     state = models.UUIDField(default=uuid.uuid4, unique=True)
-    redirect_uri = models.CharField(max_length=500)
-    next_path = models.CharField(max_length=500, null=True)
+    redirect_uri = models.TextField()
+    next_path = models.TextField(null=True, blank=True)
 
 
 class ExchangedToken(TokenModelAbstract):
