@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 
 import logging
-
+from django.db.models.functions import Lower
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -154,7 +154,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                         or id_token_object.get('zoneinfo', '')
                         or id_token_object.get('preferred_username', '')
                 )
-                cuil = cuil.strip()
+                cuil = cuil.strip() if cuil else ''
                 genero = id_token_object.get('sexo', id_token_object.get('gender', ''))
                 genero = genero.lower() if genero else ''
 
@@ -195,49 +195,65 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                     except ValueError:
                         pass
 
-                # Crear o actualizar el objeto Persona asociado al usuario
-                persona, _ = PersonaModel.objects.update_or_create(
-                    cuil=cuil,
-                    defaults={
+                if cuil:
+                    persona = (
+                        PersonaModel.objects
+                        .filter(cuil=cuil)
+                        .order_by('-id')
+                        .first()
+                    )
+                    persona_defaults = {
                         'nombre': nombre,
                         'apellido': apellido,
                         'genero': genero,
                         'fecha_nacimiento': fecha_nacimiento,
                         'documento_identidad': documento_identidad,
                         'correo_electronico': correo_electronico,
-                        'domicilio': domicilio
+                        'domicilio': domicilio,
                     }
-                )
 
-                # Asignar la instancia de Persona al usuario
-                user.persona = persona
-                if correo_electronico and hasattr(user, 'email'):
-                    user.email = correo_electronico
-                user.save()
+                    # Crear o actualizar el objeto Persona asociado al usuario
+                    if persona:
+                        for field, value in persona_defaults.items():
+                            setattr(persona, field, value)
 
-                # --- GUARDADO DINÁMICO DEL TELÉFONO ---
-                if telefono_numero:
-                    try:
-                        # Obtenemos el modelo de Teléfono y ContentType dinámicamente
-                        TelefonoModel = apps.get_model('util', 'Telefono')
-                        ContentType = apps.get_model('contenttypes', 'ContentType')
-                    except LookupError:
-                        TelefonoModel = None
-                        ContentType = None
-
-                    if TelefonoModel and ContentType:
-                        # Obtenemos el identificador del modelo Persona
-                        persona_content_type = ContentType.objects.get_for_model(PersonaModel)
-
-                        # Creamos o actualizamos el teléfono del tipo 'celular' para esta persona
-                        TelefonoModel.objects.update_or_create(
-                            content_type=persona_content_type,
-                            object_id=persona.id,
-                            tipo='celular',  # Valor constante definido en tu modelo (CELULAR = 'celular')
-                            defaults={
-                                'numero': telefono_numero
-                            }
+                        persona.cuil = cuil
+                        persona.save()
+                    else:
+                        persona = PersonaModel.objects.create(
+                            cuil=cuil,
+                            **persona_defaults
                         )
+
+                    # Asignar la instancia de Persona al usuario
+                    user.persona = persona
+                    if correo_electronico and hasattr(user, 'email'):
+                        user.email = correo_electronico
+                    user.save()
+
+                    # --- GUARDADO DINÁMICO DEL TELÉFONO ---
+                    if telefono_numero:
+                        try:
+                            # Obtenemos el modelo de Teléfono y ContentType dinámicamente
+                            TelefonoModel = apps.get_model('util', 'Telefono')
+                            ContentType = apps.get_model('contenttypes', 'ContentType')
+                        except LookupError:
+                            TelefonoModel = None
+                            ContentType = None
+
+                        if TelefonoModel and ContentType:
+                            # Obtenemos el identificador del modelo Persona
+                            persona_content_type = ContentType.objects.get_for_model(PersonaModel)
+
+                            # Creamos o actualizamos el teléfono del tipo 'celular' para esta persona
+                            TelefonoModel.objects.update_or_create(
+                                content_type=persona_content_type,
+                                object_id=persona.id,
+                                tipo='celular',  # Valor constante definido en tu modelo (CELULAR = 'celular')
+                                defaults={
+                                    'numero': telefono_numero
+                                }
+                            )
 
         oidc_profile, _ = OpenIdConnectProfileModel.objects.update_or_create(
             sub=id_token_object['sub'],
